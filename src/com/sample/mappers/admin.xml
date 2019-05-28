@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap>
+	<!-- 테이블에 등록된 모든 책을 조회하는 쿼리문 -->
+	<select id="getAllBooks" resultClass="com.sample.vo.Book">
+		select
+			book_no					as no,
+			book_title				as title,
+			book_author				as author,
+			book_publisher			as publisher,
+			book_point				as point,
+			ebook_book_available	as available,
+			book_create_date		as createDate
+		from
+			ebook_books
+		
+		order by
+			book_no desc
+	</select>
+
+	<!-- criteria를 이용해서 번호 붙이고 유저 조회하는 쿼리문 -->
+	<select id="AdminGetAllUsersByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.User">
+		select *
+		from(
+			select
+				row_number() over(order by user_no desc) rn,
+				user_no					as no,
+				user_id					as id,
+				user_password			as password,
+				user_name				as name,
+				user_email				as email,
+				user_tel				as tel,
+				user_point				as point,
+				user_role				as role,
+				user_available			as available,
+				user_create_date		as createDate
+			from 
+				ebook_users)
+		where
+				rn >= #beginIndex# and rn &lt;= #endIndex#	
+		
+	</select>
+	
+	<!-- 유저 컬럼 available 업데이트 하는 쿼리문 -->
+	<update id="AdminUpdateUser" parameterClass="com.sample.vo.User">
+		update
+			ebook_users
+		set
+			user_available = #available#
+		where
+			user_no = #no#
+	</update>
+	
+	<!-- 책을 업데이트 시켜주는 쿼리문 -->
+	<update id="AdminUpdateBook" parameterClass="com.sample.vo.Book">
+		update
+			ebook_books
+		set
+			book_no = #no#,
+			book_title = #title#,
+			booK_author = #author#,
+			book_publisher = #publisher#,
+			book_point = #point#,
+			book_front = #front#,
+			book_back = #back#	
+		where
+			book_no = #no#
+	</update>
+	
+	<!-- 북 이미지 업데이트 시켜주는 쿼리문 -->
+	<update id="AdminUpdateBookImg" parameterClass="com.sample.vo.BookImg">
+		update
+			ebook_books_images
+		set
+			book_no 			= #book.no#,
+			book_image_route	= #imageRoute#
+			
+		where
+			book_no = #book.no#
+	</update>		
+	
+	<!-- 번호로 유저 조회하는 쿼리문 -->
+	<select id="AdminGetUserByNo" parameterClass="int" resultClass="com.sample.vo.User">
+		select	
+				user_no					as no,
+				user_id					as id,
+				user_password			as password,
+				user_name				as name,
+				user_email				as email,
+				user_tel				as tel,
+				user_point				as point,
+				user_role				as role,
+				user_available			as available,
+				user_create_date		as createDate
+		from 
+				ebook_users
+		where
+				user_no = #no#
+	</select>
+	
+	<!-- 번호로 책 조회하는 쿼리문-->
+	<select id="AdminGetBookByNo" parameterClass="int" resultClass="com.sample.vo.Book">
+		select 
+				book_no					as no,
+				book_title				as title,
+				book_author				as author,
+				book_publisher			as publisher,
+				book_point				as point,
+				book_front				as front,
+				book_back				as back,
+				book_create_date		as createDate
+		from
+				ebook_books 
+		where
+				book_no = #no#
+				
+	
+	</select>
+	<!--  criteria로 게시판 글 번호 붙여서 조회하기 -->
+	<select id="getAllBoardsByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.ReviewBoard">
+		select *
+		from (
+		 		select 
+				 	row_number() over(order by a.book_no desc) rn,
+					a.board_no				as no,
+					b.book_title			as "book.title",
+					a.board_title			as title,
+					c.user_id				as "user.id",
+					a.board_hits			as hits,
+					a.board_available		as available,
+					a.board_create_date		as createDate
+				from
+					review_boards a, ebook_books b, ebook_users c
+				where
+					a.book_no = b.book_no
+					and a.user_no = c.user_no)
+		where rn >= #beginIndex# and rn &lt;= #endIndex#
+	</select>
+	
+	<!-- 책을 테이블에 저장하는 쿼리문 -->
+	<insert id="saveBook" parameterClass="com.sample.vo.Book">
+		insert into ebook_books
+			(book_no, book_title, book_author, book_publisher, book_point, book_front, book_back, ebook_book_available, book_create_date)
+		values
+			(#no#, #title#, #author#, #publisher#, #point#, #front#, #back#, 'Y', sysdate )
+	</insert>
+	
+	<!-- 북 페이지를 테이블에 저장하는 쿼리문 -->
+	<insert id="saveBookImg" parameterClass="com.sample.vo.BookImg">
+	
+		insert into ebook_book_images
+			(ebook_book_image_seq, book_no, book_image_route)
+		values
+			(ebook_images.nextval, #book.no#, #imageRoute#)
+	</insert>
+	
+	<!-- 책 시퀀스를 조회하는 쿼리문 -->
+	<select id="getSeq" resultClass="int">
+		select 
+			ebook.nextval
+		from 
+			dual
+	</select>
+	
+	<!-- criteria로  책 갯수 조회 -->
+	<select id="getBooksCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			ebook_books
+	</select>
+	
+	<!-- criteria로  게시판 갯수 조회 -->
+	<select id="getBoardsCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			review_boards
+	</select>
+	
+	<!-- criteria로  유저 갯수 조회 -->
+	<select id="getAdminUsersCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			ebook_users
+	</select>
+	
+	<!-- criteria로 책 번호 붙여서 조회하기  -->
+	<select id="getBooksByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.Book">
+		select *
+		from (
+				select
+					row_number() over(order by book_no desc) rn,
+					book_no				 as no,
+					book_title			 as title,
+					book_author			 as author,
+					book_publisher		 as publisher,
+					book_front			 as front,
+					book_point			 as point,
+					ebook_book_available as available,
+					book_create_date	 as createDate
+				from
+					ebook_books)
+				
+		where
+			rn >= #beginIndex# and rn &lt;= #endIndex#
+	</select>
+	
+	<!-- 번호로 페이지 조회하기 -->
+	<select id="getBookImgByNo" parameterClass="int" resultClass="com.sample.vo.BookImg">
+		select
+			book_no				as "book.no",
+			book_image_route	as imageRoute
+		from
+			ebook_book_images
+		where 
+			book_no = #no#
+	</select>
+	
+	<!-- 번호로 페이지 정보 삭제하기 -->
+	<delete id="deleteBookImgByNo" parameterClass="int">
+		delete
+			
+		from 
+			ebook_book_images
+		where
+			book_no = #no#	
+	</delete>
+	
+	<!-- 책 available 업데이트 하는 쿼리문 -->
+	<update id="AdminBookUpdateAvailable" parameterClass="com.sample.vo.Book">
+		update
+			ebook_books
+		set
+			ebook_book_available = #available#
+		where
+			book_no = #no#
+	</update>
+</sqlMap>
