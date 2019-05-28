@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap>
+	
+	<select id="searchpwdByUserInfo" parameterClass="com.sample.vo.User" resultClass="com.sample.vo.User" >
+		select
+			user_password			as password
+		from
+			ebook_users
+		where
+			user_name = #name#
+			and user_id = #id#
+			and user_tel = #tel#
+	
+	</select>
+	
+	<update id="modifypwd" parameterClass="com.sample.vo.User">
+		update
+			ebook_users
+		set
+			user_password = #password#
+		where
+			user_id = #id#
+			and user_tel = #tel#
+			and user_name = #name#
+		
+	</update>
+	
+	<update id="updateUserInfo" parameterClass="com.sample.vo.User">
+		update
+			ebook_users
+		set
+			user_password = #password#,
+			user_tel = #tel#,
+			user_email = #email#
+		where
+			user_id = #id#
+	</update>
+	
+	<update id="withdrawalUser" parameterClass="com.sample.vo.User">
+		update
+			ebook_users
+		set
+			user_available = #available#
+		where
+			user_no = #no#
+	</update>
+	
+	<select id="searchIdByNameAndTel" parameterClass="com.sample.vo.User" resultClass="com.sample.vo.User" >
+		select
+			user_id			as id
+		from
+			ebook_users
+		where
+			user_name = #name#
+			and user_tel = #tel#
+	
+	</select>
+	
+	<select id="searchIdByNameAndTelAndId" parameterClass="com.sample.vo.User" resultClass="com.sample.vo.User" >
+			select
+			user_id			as id,
+			user_name		as name,
+			user_tel		as tel
+		from
+			ebook_users
+		where
+			user_name = #name#
+			and user_id = #id#
+			and user_tel = #tel#
+	</select>
+
+	<insert id="saveUser" parameterClass="com.sample.vo.User">
+		insert into ebook_users
+			(user_no, user_id, user_password ,user_name, user_email, user_tel)
+		values
+			(ebook_user.nextval, #id#, #password#, #name#, #email#, #tel#)
+	</insert>
+	
+	<select id="getUserById" parameterClass="string" resultClass="com.sample.vo.User">
+		select
+			user_no					as no,
+			user_id					as id,
+			user_password			as password,
+			user_name				as name,
+			user_email				as email,
+			user_tel				as tel,
+			user_point				as point,
+			user_role				as role,
+			user_available			as available,
+			user_create_date		as createDate
+		from
+			ebook_users
+		where
+			user_id = #value#
+			and user_available = 'Y'
+	</select>
+	
+	<select id="getMyReviewListByUserNo" parameterClass="int" resultClass="com.sample.vo.ReviewBoard">
+		select
+			A.board_no				as no,
+			B.user_no				as "user.no",
+			C.book_no				as "book.no",
+			B.user_id				as "user.id",
+			A.board_title			as title,
+			A.board_contents		as contents,
+			A.board_hits			as hits,
+			A.board_create_date		as createDate
+		from
+			review_boards A, ebook_users B, ebook_books C
+		where
+			A.user_no = B.user_no
+			and A.book_no = C.book_no
+			and A.board_available = 'Y'
+			and B.user_available = 'Y'
+			and C.ebook_book_available = 'Y'
+			and A.user_no = #value#
+		order by 
+			A.board_no desc
+	</select>
+	
+	<select id="getBuyListByUserNo" parameterClass="int" resultClass="com.sample.vo.BuyEbook">
+		
+		select
+			A.buy_no 					as no,
+			C.user_no					as "user.no",
+			B.book_no					as "book.no",
+			B.book_title 				as "book.title",
+			B.book_author 				as "book.author",
+			B.book_publisher 			as "book.publisher",
+			B.book_point 				as "book.point",
+			B.book_front 				as "book.front",
+			A.buy_book_create_date 		as createDate
+		from
+			buy_ebooks A, ebook_books B, ebook_users C
+		where
+			A.book_no = B.book_no
+			and A.user_no = C.user_no
+			and B.ebook_book_available = 'Y'
+			and C.user_available = 'Y'
+			and A.user_no = #value#
+		order by 
+			A.buy_no desc	
+	</select>
+	
+	<select id="getPointListByUserNo" parameterClass="int" resultClass="com.sample.vo.PointHistory">
+		
+		select
+			A.history_no			as no,
+			B.user_no				as "user.no",
+			B.user_point			as "user.point",
+			A.history_contents		as contents,
+			A.history_point			as point,
+			A.history_create_date	as createDate
+		from
+			point_historys A, ebook_users B
+		where
+			A.user_no = B.user_no
+			and B.user_available = 'Y'
+			and A.user_no = #value#
+		order by 
+			A.history_no desc
+			
+	</select>
+	
+	<select id="getBuylistCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select 
+			count(*)
+		from
+			buy_ebooks A, ebook_books B, ebook_users C
+		where
+			A.book_no = B.book_no
+			and A.user_no = C.user_no
+			and B.ebook_book_available = 'Y'
+			and C.user_available = 'Y'
+			and A.user_no = #userNo#
+	</select>
+	
+	<select id="getPointlistCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select 
+			count(*)
+		from
+			point_historys A, ebook_users B
+		where
+			A.user_no = B.user_no
+			and B.user_available = 'Y'
+			and A.user_no = #userNo#
+	</select>
+	
+	<select id="getMyReviewListCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select 
+			count(*)
+		from
+			review_boards A, ebook_users B, ebook_books C
+		where
+			A.user_no = B.user_no
+			and A.book_no = C.book_no
+			and A.board_available = 'Y'
+			and B.user_available = 'Y'
+			and C.ebook_book_available = 'Y'
+			and A.user_no = #userNo#
+	</select>
+	
+	<select id="getMyReviewListByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.ReviewBoard">
+		select *
+		from
+			(select row_number() over(order by A.board_no desc) rn,
+					
+					A.board_no				as no,
+					B.user_no				as "user.no",
+					C.book_no				as "book.no",
+					B.user_id				as "user.id",
+					A.board_title			as title,
+					A.board_contents		as contents,
+					A.board_hits			as hits,
+					A.board_create_date		as createDate,
+					nvl (D.board_likes, 0)	as likes		
+			from 
+					review_boards A, ebook_users B, ebook_books C, (select board_no, count(*) as board_likes
+												from REVIEW_LIKES
+												GROUP by board_no) D
+			where	
+					A.user_no = B.user_no
+					and A.book_no = C.book_no
+					and A.board_available = 'Y'
+					and B.user_available = 'Y'
+					and C.ebook_book_available = 'Y'
+					and A.board_no = D.board_no(+)
+					and A.user_no = #userNo#)
+		where 	
+			rn >= #beginIndex# 
+			and rn &lt;= #endIndex#
+					
+	</select>
+	
+	<select id="getPointListByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.PointHistory">
+		select *
+		from 
+			(select row_number() over(order by A.history_no desc) rn,
+					A.history_no			as no, 
+					B.user_no				as "user.no",
+					B.user_point			as "user.point",
+					A.history_contents		as contents,
+					A.history_point			as point,
+					A.history_create_date	as createDate		
+			from 
+				point_historys A, ebook_users B
+			where	
+				A.user_no = B.user_no
+				and B.user_available = 'Y'
+				and A.user_no = #userNo#	)
+					
+		where 	
+			rn >= #beginIndex# 
+			and rn &lt;= #endIndex#
+			
+	</select>
+	
+	<select id="getBuyListByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.BuyEbook">
+ 		select *
+		from (
+				select
+				<dynamic>
+					<isEqual property="sort" compareValue="author">
+						row_number() over(order by B.book_author asc) rn,
+					</isEqual>
+					<isEqual property="sort" compareValue="date">
+						row_number() over(order by A.buy_book_create_date desc) rn,
+					</isEqual>
+					<isEqual property="sort" compareValue="point">
+						row_number() over(order by B.book_point desc) rn,
+					</isEqual>
+					<isEqual property="sort" compareValue="title">
+						row_number() over(order by B.book_title asc) rn,
+					</isEqual>
+				</dynamic>
+						A.buy_no 					as no,
+						C.user_no					as "user.no",
+						B.book_no					as "book.no",
+						B.book_title 				as "book.title",
+						B.book_author 				as "book.author",
+						B.book_publisher 			as "book.publisher",
+						B.book_point 				as "book.point",
+						B.book_front 				as "book.front",
+						A.buy_book_create_date 		as createDate
+      			from
+						buy_ebooks A, ebook_books B, ebook_users C
+				where
+						A.book_no = B.book_no
+						and A.user_no = C.user_no
+						and B.ebook_book_available = 'Y'
+						and C.user_available = 'Y'
+						and A.user_no = #userNo#
+						<dynamic>
+							<isNotNull property="opt">
+								<isEqual property="opt" compareValue="title">
+									and B.book_title like '%' || #keyword# || '%'
+								</isEqual>
+								<isEqual property="opt" compareValue="author"></isEqual>
+									and B.book_author like '%' || #keyword# || '%'
+							</isNotNull>
+						</dynamic>)
+		where
+			rn >= #beginIndex# and rn &lt;= #endIndex#
+ 	</select>
+	
+	
+	
+</sqlMap>

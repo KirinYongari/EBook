@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE sqlMapConfig
+	PUBLIC "-//ibatis.apache.org//DTD SQL Map Config 2.0 //EN"
+	"http://ibatis.apache.org/dtd/sql-map-config-2.dtd">
+<sqlMapConfig>
+	<transactionManager type="JDBC">
+  		<dataSource type="SIMPLE">
+   			<property name="JDBC.Driver" value="oracle.jdbc.driver.OracleDriver" />
+   			<property name="JDBC.ConnectionURL" value="jdbc:oracle:thin:@localhost:1521:xe" />
+   			<property name="JDBC.Username" value="sample_user" />
+   			<property name="JDBC.Password" value="zxcv1234" />
+  		</dataSource>  
+ 	</transactionManager>
+ 	<!-- <sqlMap resource="com/sample/mappers/books.xml"/> 
+ 	mappers에 xml만드시면 이런식으로 추가하셔야합니다.
+ 	-->
+ 	<sqlMap resource="com/sample/mappers/book.xml" />
+ 	<sqlMap resource="com/sample/mappers/adminboard.xml" />
+ 	<sqlMap resource="com/sample/mappers/admin.xml" />
+ 	<sqlMap resource="com/sample/mappers/reviewboard.xml" />
+ 	<sqlMap resource="com/sample/mappers/user.xml"/>
+</sqlMapConfig>

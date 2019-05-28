@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap>
+	<!-- 책 번호를 이용해 책의 정보를 조회하는 쿼리문 -->
+	<select id="getBookByNo" parameterClass="int" resultClass="com.sample.vo.Book">
+		select
+			book_no						as no,
+			book_title					as title,
+			book_author					as author,
+			book_publisher				as publisher,
+			book_point					as point,
+			book_front					as front,
+			book_back					as back,
+			ebook_book_available		as available,
+			book_create_date			as createDate
+		from
+			ebook_books
+		where
+			book_no = #value#
+	</select>
+	<!-- 해당 책의 미리보기 정보를 조회하는 쿼리문 -->
+	<select id="getBookPreview" parameterClass="int" resultClass="com.sample.vo.BookReader">
+		select
+			B.count_book_no								 		   as totalPage,
+			row_number() over(order by A.ebook_book_image_seq asc) as nowPageNo,
+			A.book_no											   as nowBookNo,
+			A.ebook_book_image_seq								   as "bookImg.imageSeq",
+			A.book_image_route							 		   as "bookImg.imageRoute"
+		from
+			ebook_book_images A, (select
+									count(book_no) as count_book_no
+								 from
+									ebook_book_images
+								 where
+									book_no = #bookNo#) B
+		where
+			A.book_no = #bookNo#
+			<![CDATA[and rownum <= 4]]>
+	</select>
+	<!-- 구매한 책에 대하여 해당 책의 정보를 조회하는 쿼리문 -->
+	<select id="getBookBuyReader" parameterClass="int" resultClass="com.sample.vo.BookReader">
+		select
+			B.count_book_no								 		   as totalPage,
+			row_number() over(order by A.ebook_book_image_seq asc) as nowPageNo,
+			A.book_no											   as nowBookNo,
+			A.ebook_book_image_seq								   as "bookImg.imageSeq",
+			A.book_image_route							 		   as "bookImg.imageRoute"
+		from
+			ebook_book_images A, (select
+									count(book_no) as count_book_no
+								 from
+									ebook_book_images
+								 where
+									book_no = #bookNo#) B
+		where
+			A.book_no = #bookNo#
+	</select>
+	<!-- 사용자가 구매한 책 번호를 조회하는 쿼리문 -->
+	<select id="getBuyEbookList" parameterClass="int" resultClass="com.sample.vo.BuyEbook">
+		select
+			book_no		as "book.no"
+		from
+			buy_ebooks
+		where
+			user_no = #userNo#
+	</select>
+	
+	<!-- 책을 구매할경우 유저의 포인트 갱신 쿼리문 -->
+	<update id="updateUserPoint" parameterClass="com.sample.vo.User">
+		update
+			ebook_users
+		set
+			user_point = #point#
+		where
+			user_no = #no#
+	</update>
+	
+	<!-- 책을 구매할경우 buy_ebooks에 구매내역 추가  -->
+	<insert id="saveBuyEbook" parameterClass="com.sample.vo.BuyEbook">
+		insert into buy_ebooks
+			(BUY_NO, USER_NO, BOOK_NO, BUY_BOOK_CREATE_DATE)
+		values
+			(ebook.nextval, #user.no#, #book.no#, sysdate)
+	</insert>
+	
+	<!-- buy_ebooks에서 해당하는 고객 조회 쿼리문 -->
+	<select id="getSelectBuyEbook" parameterClass="com.sample.vo.BuyEbook" resultClass="com.sample.vo.BuyEbook">
+		select
+			user_no		as "user.no",
+			book_no		as "book.no"
+		from 
+			buy_ebooks
+		where
+			user_no = #user.no#
+			and book_no = #book.no#
+	</select>
+	
+	<!-- 책을 사면 history에 내역이 추가되는 쿼리문 -->
+	<insert id="saveHistoryBuyEbook" parameterClass="com.sample.vo.PointHistory">
+		insert into point_historys
+			(HISTORY_NO, HISTORY_CONTENTS, HISTORY_POINT, HISTORY_CREATE_DATE, USER_NO)
+		values
+			(board.nextval, #contents#, #point#, sysdate, #user.no# )
+	</insert>
+	
+	<!-- 책에 해당하는 리뷰글 조회 쿼리문 -->
+	<select id="getSelectReviewBoardsCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from 
+			REVIEW_BOARDS
+		where
+			book_no = #bookNo#
+	</select>
+	
+	<!-- criteria를 이용해 해당하는  책에대한 리뷰글 조회 -->
+	<select id="selectBookReviewBoardsByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.ReviewBoard">
+		select *
+		from (
+				select
+					row_number() over(order by book_no desc) rn,
+					A.BOARD_NO					as no,
+					A.book_no					as "book.no",
+					B.user_id					as "user.id",
+					A.BOARD_TITLE				as title,
+					A.BOARD_CONTENTS			as contents,
+					A.BOARD_HITS				as hits,
+					A.BOARD_AVAILABLE			as available,
+					A.bOARD_CREATE_DATE			as createDate
+				from
+					REVIEW_BOARDS A, EBOOK_USERS B
+				where
+					A.board_available = 'Y'
+					and A.user_no = B.user_no
+					and A.book_no = #bookNo#)
+		where
+			 <![CDATA[rn >= #beginIndex# and rn <= #endIndex#]]>
+	</select>
+			 
+	<!-- 문재영님 코드 -->
+	<select id="getEbooksCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			ebook_books
+		where
+			ebook_book_available = 'Y'
+	</select>
+	
+	<select id="getEbooksByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.Book">
+		select *
+		from (
+				select
+					row_number() over(order by book_no desc) rn,
+					book_no				as no,
+					book_title			as title,
+					book_author			as author,
+					book_publisher		as publisher,
+					book_front			as front,
+					book_point			as point,
+					book_create_date	as createDate
+				from
+					ebook_books
+				where
+					ebook_book_available = 'Y')
+		where
+			<![CDATA[rn >= #beginIndex# and rn <= #endIndex#]]>
+	</select>
+	
+		<!-- Ebook 검색에서 검색되는 결과의 카운트를 가져온다. 문재영 -->
+ 	<select id="searchEbooksCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			ebook_books
+		where
+			ebook_book_available = 'Y'
+		<dynamic>
+			<isNotNull property="opt">
+				<isEqual property="opt" compareValue="all">				<!-- 검색 옵션이 all일 경우 -->
+					and
+						(book_title like '%' || #keyword# || '%' or		<!-- 책 제목, -->
+						book_author like '%' || #keyword# || '%' or		<!-- 책 저자, -->
+						book_publisher like '%' || #keyword# || '%')	<!-- 책 출판사 중 하나라도 일치하는 결과들의 카운트를 얻는다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="title">			<!-- 검색 옵션이 title일 경우 -->
+					and
+						book_title like '%' || #keyword# || '%'			<!-- 책 제목 중 키워드와 일치하는 결과들의 카운트를 얻는다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="author">			<!-- 검색 옵션이 author일 경우 -->
+					and
+						book_author like '%' || #keyword# || '%'		<!-- 책 저자 중 키워드와 일치하는 결과들의 카운트를 얻는다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="publisher">		<!-- 검색 옵션이 publisher일 경우 -->
+					and
+						book_publisher like '%' || #keyword# || '%'		<!-- 책 출판사 중 키워드와 일치하는 결과들의 카운트를 얻는다. -->
+				</isEqual>
+			</isNotNull>
+		</dynamic>
+ 	</select>
+
+	<!-- Ebook을 검색하고 정렬하는 쿼리 문재영 -->
+	<select id="searchEbooksByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.Book">
+		select *
+		from (
+				select
+				<dynamic>
+					<isEqual property="sort" compareValue="date">				
+						row_number() over(order by book_create_date desc) rn,	<!-- 최신순으로 정렬 -->
+					</isEqual>
+					<isEqual property="sort" compareValue="title">
+						row_number() over(order by book_title desc) rn,			<!-- 제목순으로 정렬 -->
+					</isEqual>
+					<isEqual property="sort" compareValue="author">
+						row_number() over(order by book_author desc) rn,		<!-- 저자순으로 정렬 -->
+					</isEqual>
+					<isEqual property="sort" compareValue="publisher">
+						row_number() over(order by book_publisher desc) rn,		<!-- 출판사순으로 정렬 -->
+					</isEqual>
+					<isEqual property="sort" compareValue="point">
+						row_number() over(order by book_point desc) rn,			<!-- 포인트순으로 정렬 -->
+					</isEqual>
+				</dynamic>
+					book_no				as no,
+					book_title			as title,
+					book_author			as author,
+					book_publisher		as publisher,
+					book_front			as front,
+					book_point			as point,
+					book_create_date	as createDate
+				from
+					ebook_books
+				where
+					ebook_book_available = 'Y'
+				<dynamic>
+					<isNotNull property="opt">
+						<isEqual property="opt" compareValue="all">				<!-- 검색 옵션이 all일 경우 -->
+							and
+								(book_title like '%' || #keyword# || '%' or		<!-- 책제목, -->
+								book_author like '%' || #keyword# || '%' or		<!-- 책저자, -->
+								book_publisher like '%' || #keyword# || '%')	<!-- 책출판사 중 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="title">			<!-- 검색 옵션이 title일 경우 -->
+							and
+								book_title like '%' || #keyword# || '%'			<!-- 책제목에서 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="author">			<!-- 검색 옵션이 author일 경우 -->
+							and
+								book_author like '%' || #keyword# || '%'		<!-- 책저자에서 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="publisher">		<!-- 검색 옵션이 publisher일 경우 -->
+							and
+								book_publisher like '%' || #keyword# || '%'		<!-- 책출판사에서 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+					</isNotNull>
+				</dynamic>)
+		where
+			rn >= #beginIndex# and rn &lt;= #endIndex#							<!-- 첫 순서와 마지막 순서를 지정 -->
+	</select>
+</sqlMap>

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap>
+	
+	<!-- 페이징처리 리뷰 수 세기 	-->
+	<select id="getReviewBoardCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select 
+			count(*)
+		from
+			review_boards
+		where
+			board_available = 'Y'
+	</select>
+	
+	<!-- 페이징처리 rn으로 순서 부여 정렬 -->
+	<select id="getReviewBoardByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.ReviewBoard">
+		select
+			*
+		from 
+			(select row_number() over(order by A.board_no desc) rn,
+					A.board_no				as no, 
+					B.user_name				as "user.name", 
+					A.book_no				as "book.no", 
+					A.board_title			as title, 
+					A.board_contents		as contents, 
+					A.board_hits			as hits, 
+					nvl (C.board_likes, 0)	as likes,			<!-- review_likews의 board_no를 count한걸 가져옴 -->
+					A.board_available		as "available", 
+					B.user_available		as "user.available",
+					A.board_create_date		as createDate,
+					D.book_title			as "book.title"
+			from review_boards A, ebook_users B, (select board_no, count(*) as board_likes
+												from REVIEW_LIKES
+												GROUP by board_no) C, ebook_books D
+			where	A.user_no = B.user_no
+					and A.board_available = 'Y'
+					and B.user_available = 'Y'
+					and A.board_no = C.board_no(+)
+					and A.book_no = D.book_no)
+		where 	rn >= #beginIndex# 
+			and rn &lt;= #endIndex#
+	</select>
+	
+	<!-- 글쓴 리뷰 수정하기 -->
+	<update id="updateReviewBoard" parameterClass="com.sample.vo.ReviewBoard">
+		update
+			review_boards
+		set
+			board_title = #title#,
+			board_contents = #contents#,
+			board_hits = #hits#,
+			board_available = #available#
+		where
+			board_no = #no#
+	</update>
+	
+	<!-- 리뷰글 추가하기 -->
+	<insert id="saveReviewBoard" parameterClass="com.sample.vo.ReviewBoard">
+		insert into review_boards
+			(board_no, board_title, board_contents, user_no, book_no)
+		values
+			(board.nextval, #title#, #contents#, #user.no#, #book.no#)
+	</insert>
+	
+	<!--리뷰보드 번호를 이용해 보드 정보를 조회  -->
+	<select id="getReviewBoardByNo" parameterClass="int" resultClass="com.sample.vo.ReviewBoard">
+		select 
+			A.board_no				as no,
+			A.board_title			as title,
+			B.user_id 				as "user.id",
+			B.user_name				as "user.name",
+			B.user_role				as "user.role",
+			A.board_contents		as contents,
+			A.board_hits			as hits,
+			nvl(C.board_likes, 0)		as likes,	<!-- review_likews의 board_no를 count해서 가져온걸 like(추천)으로 표현 -->
+			A.board_create_date		as createDate,
+			A.board_available		as available
+		from
+			review_boards A, ebook_users B, (select board_no, count(*) as board_likes 
+												from review_likes
+												group by board_no) C
+		where
+			A.user_no = B.user_no
+		and A.board_no = #value#
+		and A.board_available ='Y'
+		and A.board_no = C.board_no(+) 
+	</select>
+	
+	<!-- 모든 리뷰게시글 가져오기 -->
+	<select id="getAllReveiwBoards" resultClass="com.sample.vo.ReviewBoard">
+		select
+			A.board_no			as no,
+			A.board_title		as title,
+			B.user_name			as "user.name",
+			A.board_hits		as hits,
+			A.board_create_date as createDate
+			<!-- C.board_no			as "board.no" -->
+		from 
+			review_boards A, ebook_users B<!-- review_likes C -->
+		where
+			A.user_no = B.user_no
+			and A.board_available = 'Y'
+			<!-- and A.board_no = C.board_no -->
+		order by 
+			A.board_no desc
+	</select>
+	
+	<!-- review_likes 테이블에 추가 -->
+	<insert id="insertCountLikes" parameterClass="map">
+		insert into review_likes
+			(board_no,user_no)
+		values
+			(#rbNo#, #userno#) 
+	</insert>
+	
+	<!-- 추천이 눌러진 리뷰게시판 -->
+	<select id="getReviewBoardLikeByCount" parameterClass="int" resultClass="int">
+		select 
+			count(*)
+		from 
+			review_likes
+		where 
+			board_no = #value#
+	</select>
+	
+	<!-- 추천이 눌러진 리뷰게시판no와 유저no -->
+	<select id="getReviewBoardLikeByCountUser" parameterClass="map" resultClass="int">
+		select 
+			count(*)
+		from 
+			review_likes
+		where 
+			board_no = #rbNo#
+		and user_no = #userno#
+	</select>
+	
+	<!-- 이창규님코드 -->
+	<select id="getReviewBoardByBookNo" parameterClass="int" resultClass="com.sample.vo.ReviewBoard">
+		select 
+			A.board_no			as no,
+			A.user_no			as "user.no",
+			B.user_name 		as "user.name",
+			B.user_id			as "user.id",
+			C.BOOK_TITLE		as "book.title",
+			A.book_no			as "book.no",
+			A.board_title		as title,
+			A.board_contents	as contents,
+			A.board_hits		as hits,
+			A.board_available	as available,
+			A.board_create_date as createDate
+		from 
+			review_boards A, EBOOK_USERS B, EBOOK_BOOKS C
+		where
+			A.USER_NO=B.USER_NO
+			and A.BOOK_NO=C.BOOK_NO
+			and A.book_no=#bookNo#
+			and A.board_available = 'Y'
+	</select>
+	
+	<!-- 문재영. 검색기능 -->
+ 	<!-- 리뷰게시판에서 검색되는 결과들의 카운트를 얻는다. -->
+ 	<select id="searchReviewsCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			review_boards A, ebook_users B, ebook_books C
+		where
+			A.user_no = B.user_no
+		and
+			A.book_no = C.book_no
+		and
+			A.board_available = 'Y'
+		and
+			B.user_available = 'Y'
+		and
+			C.ebook_book_available = 'Y'
+		<dynamic>
+			<isNotNull property="opt">
+				<isEqual property="opt" compareValue="all">						<!-- 검색 옵션이 all인 경우 -->
+					and
+						(A.board_title like '%' || #keyword# || '%' or			<!-- 글제목, -->
+						C.book_title like '%' || #keyword# || '%' or			<!-- 리뷰한 책 제목, -->
+						A.board_contents like '%' || #keyword# || '%' or		<!-- 글내용, -->
+						B.user_name like '%' || #keyword# || '%')				<!-- 작성자 중 키워드와 하나라도 일치하는 결과들의 카운트를 가져온다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="review">					<!-- 검색 옵션이 review일 경우 -->
+					and
+						A.board_title like '%' || #keyword# || '%'				<!-- 글제목중 키워드와 일치하는 결과들의 카운트를 가져온다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="book">					<!-- 검색 옵션이 book일 경우 -->
+					and
+						C.book_title like '%' || #keyword# || '%'				<!-- 리뷰한 책 제목 중 키워드와 일치하는 결과들의 카운트를 가져온다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="contents">				<!-- 검색 옵션이 contents일 경우 -->
+					and
+						A.board_contents like '%' || #keyword# || '%'			<!-- 글내용중 키워드와 일치하는 결과들의 카운트를 가져온다. -->
+				</isEqual>
+				<isEqual property="opt" compareValue="user">					<!-- 검색옵션이 user일 경우 -->
+					and
+						B.user_name like '%' || #keyword# || '%'				<!-- 작성자 중 키워드와 일치하는 결과들의 카운트를 가져온다. -->
+				</isEqual>
+			</isNotNull>
+		</dynamic>	
+ 	</select>
+ 
+	<!-- 문재영. 검색기능 -->
+ 	<!-- 리뷰게시판을 정렬하고 검색하는 쿼리 -->
+ 	<select id="searchReviewsByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.ReviewBoard">
+ 		select *
+		from (
+				select
+				<dynamic>
+					<isEqual property="sort" compareValue="date">				
+						row_number() over(order by A.board_create_date desc) rn,<!-- 검색결과를 최신순으로 정렬한다. -->
+					</isEqual>
+					<isEqual property="sort" compareValue="hits">				
+						row_number() over(order by A.board_hits desc) rn,		<!-- 검색결과를 조회순으로 정렬한다. -->
+					</isEqual>
+					<isEqual property="sort" compareValue="title">				
+						row_number() over(order by A.board_title) rn,			<!-- 검색결과를 글제목순으로 정렬한다. -->
+					</isEqual>
+				</dynamic>
+					A.board_no				as no, 
+					B.user_name				as "user.name",
+					C.book_no				as "book.no", 
+					C.book_title 			as "book.title",
+					A.board_title			as title, 
+					A.board_contents		as contents, 
+					A.board_hits			as hits, 
+					A.board_available		as "available", 
+					B.user_available		as "user.available",
+					A.board_create_date		as createDate		
+				from
+					review_boards A, ebook_users B, ebook_books C
+				where
+					A.user_no = B.user_no
+				and
+					A.book_no = C.book_no
+				and
+					A.board_available = 'Y'
+				<dynamic>
+					<isNotNull property="opt">
+						<isEqual property="opt" compareValue="all">					<!-- 검색옵션이 all 인 경우 -->
+							and
+								(A.board_title like '%' || #keyword# || '%' or		<!-- 글제목, -->
+								C.book_title like '%' || #keyword# || '%' or		<!-- 리뷰한 책 제목, -->
+								A.board_contents like '%' || #keyword# || '%' or	<!-- 글내용, -->
+								B.user_name like '%' || #keyword# || '%')			<!-- 작성자 중 키워드와 하나라도 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="review">				<!-- 검색 옵션이 review일 경우 -->
+							and
+								A.board_title like '%' || #keyword# || '%'			<!-- 글제목중 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="book">				<!-- 검색 옵션이 book일 경우 -->
+							and
+								C.book_title like '%' || #keyword# || '%'			<!-- 리뷰한 책 제목 중 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="contents">			<!-- 검색 옵션이 contents일 경우 -->
+							and
+								A.board_contents like '%' || #keyword# || '%'		<!-- 글내용중 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+						<isEqual property="opt" compareValue="user">				<!-- 검색옵션이 user일 경우 -->
+							and
+								B.user_name like '%' || #keyword# || '%'			<!-- 작성자 중 키워드와 일치하는 결과들을 가져온다. -->
+						</isEqual>
+					</isNotNull>
+				</dynamic>)
+		where
+			rn >= #beginIndex# and rn &lt;= #endIndex#	<!-- 첫 순서와 마지막 순서를 지정 -->
+ 	</select>
+	
+</sqlMap>

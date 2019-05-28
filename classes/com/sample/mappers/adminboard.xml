@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap>
+<!--  -->
+ 
+
+ 
+ 	<!-- 공지사항 페이징을 위해 모든 게시물의 카운트를 획득 -->
+	<select id="getAdminBoardsCount" parameterClass="com.sample.vo.Criteria" resultClass="int">
+		select
+			count(*)
+		from
+			ebook_admin_boards
+		where
+			board_admin_board_available = 'Y'
+	</select>
+ 
+ 	<!-- 공지사항 업데이트 -->
+	<update id="updateAdminBoard" parameterClass="com.sample.vo.AdminBoard">
+		update
+			ebook_admin_boards
+		set
+			board_title = #title#,
+			admin_board_contents = #contents#,
+			board_admin_board_available = #available#,
+			board_hits = #hits#
+		where
+			board_no = #no#
+	</update>
+	
+	<!-- 번호에 맞는 공지사항 가져오기 -->
+	<select id="getAdminBoardByNo" parameterClass="int" resultClass="com.sample.vo.AdminBoard">
+		select
+			A.board_no						as no,
+			B.user_id						as "user.id",
+			B.user_name						as "user.name",
+			B.user_role						as "user.role",
+			A.board_title					as title,
+			A.admin_board_contents			as contents,
+			A.board_hits					as hits,
+			A.board_admin_board_available	as available,
+			A.board_create_date				as createDate
+		from
+			ebook_admin_boards A, ebook_users B
+		where
+			A.admin_no = B.user_no
+		and
+			A.board_no = #value#
+		and
+			A.board_admin_board_available = 'Y'
+	</select>
+
+	<!-- 공지사항을 선택한 순서로 정렬하는 쿼리 -->
+	<select id="getAdminBoardsByCriteria" parameterClass="com.sample.vo.Criteria" resultClass="com.sample.vo.AdminBoard">
+ 		select *
+		from (
+				select
+				<dynamic>
+					<isEqual property="sort" compareValue="title">				
+						row_number() over(order by A.board_title asc) rn,		<!-- 책제목순으로 정렬 -->
+					</isEqual>
+					<isEqual property="sort" compareValue="hits">				
+						row_number() over(order by A.board_hits desc) rn,		<!-- 조회순으로 정렬 -->
+					</isEqual>
+					<isEqual property="sort" compareValue="date">				<!-- 최신순으로 정렬 -->
+						row_number() over(order by A.board_create_date desc) rn,<!--  -->
+					</isEqual>
+				</dynamic>
+						A.board_no						as no,
+						B.user_name						as "user.name",
+						A.board_title					as title,
+						A.admin_board_contents			as contents,
+						A.board_hits					as hits,
+						A.board_admin_board_available	as available,
+						A.board_create_date				as createDate
+      			from
+						ebook_admin_boards A, ebook_users B
+				where
+						board_admin_board_available = 'Y'
+				and
+						A.admin_no = B.user_no)
+		where
+			rn >= #beginIndex# and rn &lt;= #endIndex#	<!-- 첫 순서와 마지막 순서를 지정 -->
+ 	</select>
+	
+	<!-- 모든 공지사항 가져오기 -->
+	<select id="getAllAdminBoards" resultClass="com.sample.vo.AdminBoard">
+		select
+			A.board_no						as no,
+			B.user_name						as "user.name",
+			A.board_title					as title,
+			A.admin_board_contents			as contents,
+			A.board_hits					as hits,
+			A.board_admin_board_available	as available,
+			A.board_create_date				as createDate
+		from
+			ebook_admin_boards A, ebook_users B
+		where
+			A.admin_no = B.user_no
+		and
+			A.board_admin_board_available = 'Y'
+		order by
+			A.board_no desc
+	</select>
+	
+	<!-- 공지사항 등록 -->
+	<insert id="saveAdminBoard" parameterClass="com.sample.vo.AdminBoard">
+		insert into ebook_admin_boards
+			(board_no, board_title, admin_board_contents, admin_no)
+		values
+			(board.nextval, #title#, #contents#, #user.no#)
+	</insert>
+</sqlMap>
